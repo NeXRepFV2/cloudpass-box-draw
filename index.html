@@ -4,11 +4,15 @@
   <meta charset="UTF-8">
   <title>云卡盲盒 CLOUDPASS BOX DRAW</title>
   <style>
-    body {
+    html, body {
+      height: 100%;
+      width: 100%;
       margin: 0;
       padding: 0;
+    }
+    body {
       font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #FF8C00, #FFB347); /* ✅背景渐变修正版 */
+      background: linear-gradient(to bottom, #FF8C00, #FFB347); /* ✅ 背景顺滑渐变 */
       text-align: center;
       color: #fff;
     }
@@ -94,8 +98,8 @@
 <button class="admin-btn" onclick="adminAccess()">⚙️</button>
 
 <div id="adminZone">
-  <button onclick="resetPool()">重置奖池</button>
-  <button onclick="exportCSV()">导出中奖数据</button>
+  <button onclick="resetPool()">重置奖池 / Reset Pool</button>
+  <button onclick="exportCSV()">导出中奖数据 / Export Results</button>
 </div>
 
 <script>
