@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>云卡盲盒 CLOUDPASS BOX DRAW</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #ff8800, #552200);
+      text-align: center;
+      color: #fff;
+    }
+    h1 {
+      margin-top: 30px;
+      font-size: 30px;
+    }
+    .form-container {
+      margin: 20px;
+    }
+    input, button {
+      margin: 10px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+    }
+    #startButton {
+      background-color: #ff8800;
+      color: white;
+      cursor: pointer;
+    }
+    #startButton:disabled {
+      background-color: gray;
+    }
+    .blindbox {
+      width: 150px;
+      margin: 20px auto;
+      transition: transform 0.3s;
+    }
+    .shake {
+      animation: shake 1s;
+    }
+    @keyframes shake {
+      0% { transform: rotate(0deg);}
+      25% { transform: rotate(10deg);}
+      50% { transform: rotate(-10deg);}
+      75% { transform: rotate(10deg);}
+      100% { transform: rotate(0deg);}
+    }
+    .result {
+      margin: 20px;
+      text-align: left;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .admin-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ff8800;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    #adminZone {
+      margin-top: 20px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<h1>云卡盲盒 / CLOUDPASS BOX DRAW</h1>
+
+<div class="form-container">
+  <input type="text" id="zmycode" placeholder="请输入ZMY编号 / Enter ZMY Code">
+  <input type="email" id="email" placeholder="请输入Email / Enter Email">
+  <input type="number" id="drawtimes" placeholder="抽奖次数 / Draw Times" min="1">
+  <br>
+  <button id="startButton">开始抽奖 / Start Draw</button>
+</div>
+
+<img src="blindbox.png" alt="盲盒" id="blindbox" class="blindbox">
+
+<div id="result" class="result"></div>
+
+<button class="admin-btn" onclick="adminAccess()">⚙️</button>
+
+<div id="adminZone">
+  <button onclick="resetPool()">重置奖池</button>
+  <button onclick="exportCSV()">导出中奖数据</button>
+</div>
+
+<script>
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzI0FlrR7e6uz0lcWj20pfArt2qgm0Id58hvLcUbOe6FQ_yq-CIaUp0aRLDrrHiGxar/exec";
+
+let prizes = {
+  "RM10": 267,
+  "RM20": 20,
+  "RM50": 10,
+  "RM499": 3
+};
+
+let results = [];
+let rm10count = 0;
+
+function sendToGoogleSheets(zmy, email, prize, timestamp) {
+  fetch(GOOGLE_SHEET_URL, {
+    method: "POST",
+    body: JSON.stringify({ timestamp: timestamp, zmycode: zmy, email: email, result: prize })
+  }).then(res => console.log("同步成功"));
+}
+
+document.getElementById('startButton').addEventListener('click', () => {
+  const zmy = document.getElementById('zmycode').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const drawtimes = parseInt(document.getElementById('drawtimes').value);
+
+  if (!zmy || !email || isNaN(drawtimes) || drawtimes <= 0) {
+    alert("请完整填写信息 / Please complete all information");
+    return;
+  }
+
+  document.getElementById('startButton').disabled = true;
+  const box = document.getElementById('blindbox');
+  box.classList.add('shake');
+
+  setTimeout(() => {
+    box.classList.remove('shake');
+    for (let i = 0; i < drawtimes; i++) {
+      const prize = pickPrize();
+      const now = new Date();
+      const timestamp = now.getFullYear() + "-" + 
+                        ("0" + (now.getMonth()+1)).slice(-2) + "-" + 
+                        ("0" + now.getDate()).slice(-2) + " " +
+                        ("0" + now.getHours()).slice(-2) + ":" +
+                        ("0" + now.getMinutes()).slice(-2) + ":" +
+                        ("0" + now.getSeconds()).slice(-2) + " GMT+8";
+      const message = `🎉 ${zmy} 抽中了 ${prize}！Congratulations! You won ${prize}! (${timestamp})`;
+      results.push({timestamp, zmy, email, prize});
+      document.getElementById('result').innerHTML += `<p>${message}</p>`;
+      sendToGoogleSheets(zmy, email, prize, timestamp);
+    }
+  }, 1000);
+});
+
+function pickPrize() {
+  rm10count++;
+  if (rm10count >= 30 && prizes["RM499"] > 0) { prizes["RM499"]--; return "RM499"; }
+  if (rm10count >= 20 && prizes["RM50"] > 0) { prizes["RM50"]--; return "RM50"; }
+  if (rm10count >= 10 && prizes["RM20"] > 0) { prizes["RM20"]--; return "RM20"; }
+  if (prizes["RM10"] > 0) { prizes["RM10"]--; return "RM10"; }
+  return "谢谢参与 / Thank you";
+}
+
+function adminAccess() {
+  const pwd = prompt("请输入密码 / Enter password");
+  if (pwd === "888888") {
+    document.getElementById('adminZone').style.display = 'block';
+  }
+}
+
+function resetPool() {
+  if (confirm("确认重置奖池？/ Confirm reset pool?")) {
+    prizes = {"RM10":267, "RM20":20, "RM50":10, "RM499":3};
+    rm10count = 0;
+    results = [];
+    document.getElementById('result').innerHTML = "";
+    alert("奖池已重置！/ Prize pool reset!");
+  }
+}
+
+function exportCSV() {
+  let csv = "时间戳, ZMY编号, Email, 中奖结果\n";
+  results.forEach(r => {
+    csv += `${r.timestamp},${r.zmy},${r.email},${r.prize}\n`;
+  });
+  const blob = new Blob([csv], {type:"text/csv"});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = "cloudpass_results.csv";
+  link.click();
+}
+</script>
+
+</body>
+</html>
